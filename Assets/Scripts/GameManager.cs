@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class GameManager : MonoBehaviour
 {
@@ -32,28 +33,38 @@ public class GameManager : MonoBehaviour
     private int maxUnlockedLevel = 0;
     private bool justWon = false;
 
-    private string[][,] levels =
+    private enum TileType
     {
-        new string[4, 4]
+        Block,
+        Empty,
+        Orange1,
+        Orange2,
+        Orange3,
+        Orange4
+    }
+
+    private TileType[][,] levels =
+    {
+        new TileType[4, 4]
         {
-            { "block", "empty", "orange3", "orange4" },
-            { "block", "empty", "orange2", "empty" },
-            { "empty", "empty", "empty", "empty" },
-            { "empty", "block", "empty", "orange1" }
+            { TileType.Block,  TileType.Empty,  TileType.Orange3, TileType.Orange4 },
+            { TileType.Block,  TileType.Empty,  TileType.Orange2, TileType.Empty },
+            { TileType.Empty,  TileType.Empty,  TileType.Empty,   TileType.Empty },
+            { TileType.Empty,  TileType.Block,  TileType.Empty,   TileType.Orange1 }
         },
-        new string[4, 4]
+        new TileType[4, 4]
         {
-            { "orange3", "empty", "empty", "orange4" },
-            { "block", "block", "empty", "empty" },
-            { "empty", "orange1", "empty", "orange2" },
-            { "empty", "empty", "block", "empty" }
+            { TileType.Orange3, TileType.Empty,  TileType.Empty,   TileType.Orange4 },
+            { TileType.Block,   TileType.Block,  TileType.Empty,   TileType.Empty },
+            { TileType.Empty,   TileType.Orange1,TileType.Empty,   TileType.Orange2 },
+            { TileType.Empty,   TileType.Empty,  TileType.Block,   TileType.Empty }
         },
-        new string[4, 4]
+        new TileType[4, 4]
         {
-            { "orange4", "block", "orange2", "orange1" },
-            { "empty", "block", "empty", "empty" },
-            { "orange3", "empty", "empty", "empty" },
-            { "empty", "block", "empty", "empty" }
+            { TileType.Orange4, TileType.Block,  TileType.Orange2, TileType.Orange1 },
+            { TileType.Empty,   TileType.Block,  TileType.Empty,   TileType.Empty },
+            { TileType.Orange3, TileType.Empty,  TileType.Empty,   TileType.Empty },
+            { TileType.Empty,   TileType.Block,  TileType.Empty,   TileType.Empty }
         }
     };
 
@@ -116,7 +127,7 @@ public class GameManager : MonoBehaviour
 
     void CreateGrid()
     {
-        string[,] layout = levels[currentLevel];
+        TileType[,] layout = levels[currentLevel];
 
         int index = 0;
         for (int r = 0; r < 4; r++)
@@ -127,17 +138,18 @@ public class GameManager : MonoBehaviour
 
                 switch (layout[r, c])
                 {
-                    case "block": prefab = blockPrefab; break;
-                    case "orange1": prefab = orange1Prefab; break;
-                    case "orange2": prefab = orange2Prefab; break;
-                    case "orange3": prefab = orange3Prefab; break;
-                    case "orange4": prefab = orange4Prefab; break;
-                    case "empty": prefab = emptyPrefab; break;
+                    case TileType.Block: prefab = blockPrefab; break;
+                    case TileType.Orange1: prefab = orange1Prefab; break;
+                    case TileType.Orange2: prefab = orange2Prefab; break;
+                    case TileType.Orange3: prefab = orange3Prefab; break;
+                    case TileType.Orange4: prefab = orange4Prefab; break;
+                    case TileType.Empty: prefab = emptyPrefab; break;
                 }
 
                 if (prefab != null)
                 {
                     GameObject obj = Instantiate(prefab, gridContainer);
+                    obj.name = layout[r, c].ToString().ToLower();
                     obj.transform.SetSiblingIndex(index++);
                     grid[r, c] = obj;
 
@@ -163,7 +175,7 @@ public class GameManager : MonoBehaviour
             {
                 remainingTime = 0f;
                 isGameOver = true;
-                if (losePanel != null) losePanel.SetActive(true);
+                ShowPanelWithDrop(losePanel);
                 if (UIGame != null) UIGame.SetActive(false);
             }
 
@@ -286,7 +298,7 @@ public class GameManager : MonoBehaviour
                 if (n1.Contains("orange3") && n2.Contains("orange4") &&
                     n3.Contains("orange1") && n4.Contains("orange2"))
                 {
-                    if (panelWin != null) panelWin.SetActive(true);
+                    ShowPanelWithDrop(panelWin);
                     if (UIGame != null) UIGame.SetActive(false);
                     isGameOver = true;
                     justWon = true;
@@ -317,5 +329,22 @@ public class GameManager : MonoBehaviour
         }
 
         UnlockLevels();
+    }
+
+    void ShowPanelWithDrop(GameObject panel)
+    {
+        if (panel == null) return;
+
+        RectTransform rt = panel.GetComponent<RectTransform>();
+        if (rt == null)
+        {
+            // panel is regular GameObject
+            Vector3 originalPosition = panel.transform.position;
+            float offset = Mathf.Max(Screen.height * 0.6f, 100f);
+            panel.transform.position = panel.transform.position + Vector3.up * offset;
+            panel.SetActive(true);
+            panel.transform.DOMove(originalPosition, 0.6f).SetEase(Ease.OutBack);
+            return;
+        }
     }
 }
